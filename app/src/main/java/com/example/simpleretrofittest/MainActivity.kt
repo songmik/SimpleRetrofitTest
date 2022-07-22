@@ -3,6 +3,7 @@ package com.example.simpleretrofittest
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import com.example.simpleretrofittest.databinding.ActivityMainBinding
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.*
@@ -10,9 +11,13 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
 
         val interceptor = HttpLoggingInterceptor()
@@ -23,29 +28,38 @@ class MainActivity : AppCompatActivity() {
             .connectTimeout(20000L, TimeUnit.SECONDS)
             .build()
 
-        val retrofit = Retrofit.Builder()
+
+        // Retrofit 초기화
+       val retrofit = Retrofit.Builder()
             .baseUrl("https://aml-api-dev.rootone.com/")
             .client(client)
+                // JSON을 변환해줄 Gson 변환기 등록
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
+        // create 메서드에 Service 클래스를 넣어 HTTP에 접근할 Retrofit 객체를 만든다
         val service = retrofit.create(Service::class.java)
 
-        service.getData().enqueue(object : Callback<Data>{
-            override fun onResponse(call: Call<Data>, response: Response<Data>) {
+
+        val data = Two(
+            name = binding.nameEditText.text.toString(),
+            phoneNumber = binding.numberEditText.text.toString()
+        )
+
+
+        // Enqueue로 비동기 통신 실행 -> API 통신
+        service.getData(data).enqueue(object : Callback<Result> {
+            override fun onResponse(call: Call<Result>, response: Response<Result>) {
                 if (response.isSuccessful) {
-                    Log.d("Success", "성공 : " + response.body())
-                } else {
-                    Log.d("Fail", "실패")
+                    Log.d("Response Test", response.body().toString())
+                    binding.textView.text = response.body().toString()
                 }
             }
 
-            override fun onFailure(call: Call<Data>, t: Throwable) {
-                Log.d("Error", "에러"+ t.message)
+            override fun onFailure(call: Call<Result>, t: Throwable) {
+                TODO("Not yet implemented")
             }
 
         })
-
-
     }
 }
